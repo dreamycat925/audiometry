@@ -1,0 +1,15 @@
+services:
+  audiometry:
+    build: .
+    container_name: audiometry-dev
+    ports:
+      - "127.0.0.1:60000:8501"
+    environment:
+      - STREAMLIT_SERVER_ADDRESS=0.0.0.0
+      - STREAMLIT_SERVER_PORT=8501
+      - STREAMLIT_SERVER_HEADLESS=true
+      - STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+      - STREAMLIT_SERVER_FILE_WATCHER_TYPE=auto
+    volumes:
+      - ./:/app
+    command: ["streamlit", "run", "audiometry_app.py", "--server.address=0.0.0.0", "--server.port=8501", "--server.headless=true", "--browser.gatherUsageStats=false"]

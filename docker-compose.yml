@@ -1,0 +1,13 @@
+services:
+  audiometry:
+    build: .
+    container_name: audiometry
+    ports:
+      - "127.0.0.1:60000:8501"
+    restart: unless-stopped
+    environment:
+      - STREAMLIT_SERVER_ADDRESS=0.0.0.0
+      - STREAMLIT_SERVER_PORT=8501
+      - STREAMLIT_SERVER_HEADLESS=true
+      - STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+      - STREAMLIT_SERVER_FILE_WATCHER_TYPE=none

@@ -35,6 +35,22 @@ streamlit run audiometry_app.py
 
 Then open the browser page and follow the on-screen instructions.
 
+### 4. Run with Docker
+
+For local-only Docker execution:
+
+```bash
+docker compose up --build -d
+```
+
+Then open:
+
+```text
+http://localhost:60000
+```
+
+For details, see `README_DOCKER.md`.
+
 ### Hosted App
 
 Public URL:
