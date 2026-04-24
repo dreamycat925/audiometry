@@ -503,6 +503,7 @@ def finalize_run() -> None:
     raw_df = raw_df_from_results(results, run_no, settings)
     summary_df = summarize(raw_df, calibration)
     report_note = generate_neuropsych_note(summary_df, calibration)
+    summary_text = make_summary_text(summary_df, settings, calibration, run_no=run_no)
     text_report = make_text_report(raw_df, summary_df, settings, calibration, run_no=run_no)
     completed_at = datetime.now().isoformat(timespec="seconds")
 
@@ -514,6 +515,7 @@ def finalize_run() -> None:
         "raw_rows": results,
         "summary_rows": summary_df.to_dict(orient="records"),
         "report_note": report_note,
+        "summary_text": summary_text,
         "text_report": text_report,
     }
 
@@ -863,6 +865,52 @@ def make_text_report(
     return "\n".join(lines)
 
 
+def make_summary_text(
+    summary_df: pd.DataFrame,
+    settings: Dict[str, Any],
+    calibration: Optional[Dict[str, Any]],
+    run_no: Optional[int] = None,
+) -> str:
+    lines: List[str] = ["簡易聴力スクリーニング サマリー", "=" * 32]
+    if run_no is not None:
+        lines.append(f"Run: {run_no}")
+    lines.append(f"作成日時: {datetime.now().isoformat(timespec='seconds')}")
+    lines.append(f"検査ID: {settings.get('test_id', '')}")
+    lines.append(f"ヘッドホン: {settings.get('headphone', '')}")
+    lines.append(f"提示範囲: {settings.get('min_level')}〜{settings.get('max_level')} app-dB")
+    lines.append(f"校正: {calibration.get('profile_name', 'なし') if calibration else 'なし'}")
+    lines.append("")
+    lines.append("耳別サマリー")
+    lines.append("-" * 32)
+
+    if summary_df.empty:
+        lines.append("結果なし")
+    else:
+        for _, row in summary_df.iterrows():
+            ear = str(row.get("耳", ""))
+            lines.append(f"{ear}耳")
+            lines.append(f"  500Hz: {row.get('500Hz_表示', '')}")
+            lines.append(f"  1000Hz: {row.get('1000Hz_表示', '')}")
+            lines.append(f"  2000Hz: {row.get('2000Hz_表示', '')}")
+            lines.append(f"  4000Hz: {row.get('4000Hz_表示', '')}")
+            avg_old = row.get("旧来4分法_app_dB", math.nan)
+            avg_4 = row.get("4周波数平均_app_dB", math.nan)
+            retest = row.get("1000Hz再測定差_app_dB", math.nan)
+            lines.append(f"  旧来4分法: {'—' if pd.isna(avg_old) else f'{float(avg_old):.1f} app-dB'}")
+            lines.append(f"  4周波数平均: {'—' if pd.isna(avg_4) else f'{float(avg_4):.1f} app-dB'}")
+            lines.append(f"  1000Hz再検差: {'—' if pd.isna(retest) else f'{float(retest):.1f} app-dB'}")
+            reliability = str(row.get("信頼性メモ", ""))
+            censored = str(row.get("打ち切りメモ", ""))
+            if reliability:
+                lines.append(f"  注意: {reliability}")
+            if censored:
+                lines.append(f"  注意: {censored}")
+            lines.append("")
+
+    lines.append(generate_neuropsych_note(summary_df, calibration))
+    return "\n".join(lines)
+
+
 def latest_run_dataframes() -> Tuple[Optional[Dict[str, Any]], pd.DataFrame, pd.DataFrame]:
     latest = st.session_state.get("latest_run")
     if latest is None:
@@ -955,51 +1003,26 @@ def build_audiogram_chart(
     )
 
 
-def latest_run_downloads(latest: Dict[str, Any], raw_df: pd.DataFrame, summary_df: pd.DataFrame) -> None:
+def latest_run_downloads() -> None:
     session_logs_df = log_df()
-    run_logs_df = log_df(run_no=int(latest["run_no"]))
-    history_df = build_history_dataframe()
-
-    c1, c2, c3 = st.columns(3)
+    st.caption(
+        "CSV には run_no, item_no, ear, freq_hz, measure_type, level_app_db, heard, phase, timestamp が入ります。"
+    )
+    c1, c2 = st.columns(2)
     with c1:
         st.download_button(
-            "このrunの集計CSV",
-            data=summary_df.to_csv(index=False).encode("utf-8-sig"),
-            file_name=f"hearing_summary_run_{latest['run_no']}.csv",
-            mime="text/csv",
-        )
-        st.download_button(
-            "このrunのログCSV",
-            data=run_logs_df.to_csv(index=False).encode("utf-8-sig"),
-            file_name=f"hearing_log_run_{latest['run_no']}.csv",
-            mime="text/csv",
-        )
-    with c2:
-        st.download_button(
-            "このrunの生データCSV",
-            data=raw_df.to_csv(index=False).encode("utf-8-sig"),
-            file_name=f"hearing_raw_run_{latest['run_no']}.csv",
-            mime="text/csv",
-        )
-        st.download_button(
-            "全sessionログCSV",
+            "全sessionログCSVをダウンロード",
             data=session_logs_df.to_csv(index=False).encode("utf-8-sig"),
             file_name="hearing_session_log.csv",
             mime="text/csv",
         )
-    with c3:
-        st.download_button(
-            "このrunのレポートTXT",
-            data=str(latest.get("text_report", "")).encode("utf-8-sig"),
-            file_name=f"hearing_report_run_{latest['run_no']}.txt",
-            mime="text/plain",
-        )
-        if not history_df.empty:
+    with c2:
+        if latest_run is not None:
             st.download_button(
-                "実施履歴CSV",
-                data=history_df.to_csv(index=False).encode("utf-8-sig"),
-                file_name="hearing_run_history.csv",
-                mime="text/csv",
+                "最新runサマリーTXTをダウンロード",
+                data=str(latest_run.get("summary_text", "")).encode("utf-8-sig"),
+                file_name=f"hearing_summary_run_{latest_run['run_no']}.txt",
+                mime="text/plain",
             )
 
 
@@ -1235,8 +1258,8 @@ if latest_run is not None:
     with st.expander("このrunの操作ログ", expanded=False):
         st.dataframe(run_log_df, use_container_width=True, height=240)
 
-    st.subheader("ダウンロード")
-    latest_run_downloads(latest_run, latest_raw_df, latest_summary_df)
+    st.subheader("ログ保存")
+    latest_run_downloads()
 
 history_df = build_history_dataframe()
 if not history_df.empty:
