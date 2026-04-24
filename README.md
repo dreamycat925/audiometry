@@ -35,6 +35,12 @@ streamlit run audiometry_app.py
 
 Then open the browser page and follow the on-screen instructions.
 
+### Hosted App
+
+Public URL:
+
+`https://audiometry-2cduqgwpruh6vu8uxuibia.streamlit.app/`
+
 ## Recommended Use Conditions
 
 - Use as quiet a room as possible
