@@ -1,0 +1,26 @@
+{
+  "profile_name": "example_nonvalidated_profile",
+  "description": "例です。この値をそのまま臨床使用しないでください。同一PC・同一ヘッドホン・同一OS音量で院内校正して作成してください。",
+  "device": {
+    "pc": "例: ThinkPad X1",
+    "browser": "例: Chrome",
+    "os_volume": "100%",
+    "headphone": "例: 有線ヘッドホン名"
+  },
+  "calibrated_at": "YYYY-MM-DD",
+  "offsets_db": {
+    "右": {
+      "500": 0,
+      "1000": 0,
+      "2000": 0,
+      "4000": 0
+    },
+    "左": {
+      "500": 0,
+      "1000": 0,
+      "2000": 0,
+      "4000": 0
+    }
+  },
+  "notes": "app閾値 + offsets_db = 推定dB HL、という想定の例。実測に基づいて周波数・耳ごとに補正値を入れてください。"
+}
