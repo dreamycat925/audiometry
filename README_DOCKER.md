@@ -1,45 +1,53 @@
 # Docker / Docker Compose (local-only)
 
-このリポジトリには、簡易聴力スクリーニングの Streamlit アプリを
-ローカルで安定して動かすための Docker / Docker Compose 設定を入れています。
+This repository includes Docker / Docker Compose settings for running the Streamlit-based audiometry screening app locally in a stable way.
 
-## 置く場所
-以下のファイルを、`audiometry_app.py` と同じ階層に置きます。
+This README assumes the following files are present at the repository root:
 
 - `Dockerfile`
 - `docker-compose.yml`
 - `docker-compose.dev.yml`
 - `.dockerignore`
+- `requirements.txt`
+- `audiometry_app.py`
 
-## 1. 安定運用（通常はこちら）
+## 1. Standard Local Run
 
 ```bash
 docker compose up --build -d
 ```
 
-開くURL:
+Open:
 
 ```text
 http://localhost:60000
 ```
 
-停止:
+Stop:
 
 ```bash
 docker compose down
 ```
 
-## 2. 開発モード（live edit）
+In this mode, the Streamlit file watcher is disabled inside the container to prioritize stable fixed behavior for routine local use.
+
+## 2. Development Mode (live edit)
 
 ```bash
 docker compose -f docker-compose.dev.yml up --build
 ```
 
-このモードでは、カレントディレクトリをコンテナに mount するので、
-ファイル編集が再 build なしで反映されやすくなります。
+In this mode, the current directory is mounted into the container, so local file edits are more likely to be reflected without rebuilding the image.
 
-## メモ
+Stop:
 
-- ホスト側は `127.0.0.1:60000` に bind しています。LAN からは見えません。
-- コンテナ内では Streamlit を `0.0.0.0:8501` で待ち受けます。
-- `localhost:00000` は無効なポート番号なので、ここでは `localhost:60000` を使っています。
+```bash
+docker compose -f docker-compose.dev.yml down
+```
+
+## Notes
+
+- The host binds to `127.0.0.1:60000`, so the app is not exposed to the local network.
+- Inside the container, Streamlit listens on `0.0.0.0:8501`.
+- Standard mode uses `--server.fileWatcherType=none`, while development mode uses `auto`.
+- The image is based on `python:3.11-slim` and installs dependencies from `requirements.txt`.

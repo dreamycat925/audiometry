@@ -4,6 +4,8 @@ This app is a **brief auditory input screening tool** intended for use before ne
 
 It presents pure tones through a PC and headphones and estimates air-conduction thresholds for each ear at `500 / 1000 / 2000 / 4000 Hz`. It then reports a conversational-frequency average and a 4-frequency average.
 
+It is designed for **examiner-operated use**: the examiner controls tone presentation and records the patient's verbal or gesture response on screen.
+
 > Important: Without calibration, the displayed values are **app-dB, not dB HL**. This tool must not be used for diagnosis, disability certification, hearing-aid fitting, or formal audiological assessment.
 
 ## What It Does
@@ -12,7 +14,10 @@ It presents pure tones through a PC and headphones and estimates air-conduction 
 - Re-tests `1000 Hz` for a simple reliability check
 - Calculates the traditional 4-frequency conversational average: `(500 + 2*1000 + 2000) / 4`
 - Calculates the 4-frequency pure-tone average: `(500 + 1000 + 2000 + 4000) / 4`
-- Exports raw CSV, summary CSV, and TXT report files
+- Shows a latest-run summary table, raw result table, and an audiogram-style chart
+- Exports a session log CSV and a latest-run summary TXT file
+- Supports undo of the most recent response
+- Keeps an in-session run history
 - Optionally shows estimated `dB HL` using a local calibration JSON profile
 
 ## Setup
@@ -89,6 +94,8 @@ The threshold search is a fast ascending screening procedure:
 
 This is a pragmatic screening method designed to finish in a few minutes. It is not a strict Hughson-Westlake implementation.
 
+The default presentation range is `0` to `80 app-dB`. In the current internal output scale, the app limits the configurable maximum to `88 app-dB` to avoid digital clipping.
+
 ## Interpreting Results
 
 ### app-dB
@@ -104,6 +111,15 @@ Without calibration, `app-dB` is only an internal app scale.
 do **not** mean `30 / 40 / 50 dB HL`.
 
 The app now keeps the `app-dB` sound-output scale fixed internally, so changing the screening upper limit does not redefine the meaning of a given `app-dB` value.
+
+In the current implementation:
+
+```text
+80 app-dB = -8 dBFS
+88 app-dB = 0 dBFS
+```
+
+For that reason, values above `88 app-dB` are not allowed.
 
 ### Traditional 4-Frequency Conversational Average
 
@@ -128,16 +144,22 @@ If the patient still does not respond at the maximum presentation level, the res
 The summary therefore displays it as:
 
 ```text
->=85 app-dB
+>=(maximum presentation level + 5) app-dB
 ```
 
 or, if calibration is applied:
 
 ```text
->=xx.x dB HL
+>=(maximum presentation level + 5 + offset) dB HL
 ```
 
 These censored values are not used in the average calculations.
+
+With the default maximum of `80 app-dB`, this appears as:
+
+```text
+>=85 app-dB
+```
 
 ## Local Calibration Profile
 
@@ -185,7 +207,7 @@ Calibration values should ideally be derived by comparing same-day app results w
 
 ## Report Language
 
-The generated report includes wording along these lines:
+The app generates a neuropsychology-oriented note and a latest-run summary TXT. They include wording along these lines:
 
 ```text
 This test is a brief auditory screening performed with a non-calibrated or locally calibrated PC/browser sound source and headphones.
@@ -219,3 +241,5 @@ calibration_profile.example.json
 - Tones are generated as WAV data in Python and played with `st.audio`
 - `st.audio(..., autoplay=True)` may still require user interaction depending on browser autoplay restrictions
 - Test state is stored in `st.session_state`
+- The app includes left/right headphone check tones before the run starts
+- The latest run view includes summary cards, raw tables, an audiogram-style plot, and per-run logs

@@ -39,6 +39,7 @@ DEFAULT_MIN_LEVEL = 0
 DEFAULT_MAX_LEVEL = 80
 DEFAULT_MAX_DBFS = -8.0  # MAX_LEVEL app-dB のときのデジタルピークレベル
 APP_DB_REFERENCE_MAX_LEVEL = DEFAULT_MAX_LEVEL  # app-dB の音量基準は常に固定する
+MAX_SAFE_APP_DB = int(math.floor(APP_DB_REFERENCE_MAX_LEVEL - DEFAULT_MAX_DBFS))
 
 FREQ_SEQUENCE = [1000, 2000, 4000, 500, 1000]
 FREQ_LABELS = ["1000Hz", "2000Hz", "4000Hz", "500Hz", "1000Hz再測定"]
@@ -115,6 +116,8 @@ def make_tone_wav(
         raise ValueError("freq_hz must be positive")
     if ear not in ("右", "左", "両耳"):
         raise ValueError("ear must be '右', '左', or '両耳'")
+    if level_app_db > MAX_SAFE_APP_DB:
+        raise ValueError(f"level_app_db must be <= {MAX_SAFE_APP_DB} to avoid digital clipping")
 
     n_samples = int(sample_rate * duration_sec)
     t = np.arange(n_samples, dtype=np.float64) / sample_rate
@@ -338,6 +341,11 @@ def validate_settings(settings: Dict[str, Any], calibration: Optional[Dict[str, 
         errors.append("最大レベルは最小レベルより大きくしてください。")
     if not (settings["min_level"] <= settings["start_level"] <= settings["max_level"]):
         errors.append("開始レベルは最小〜最大レベルの範囲内にしてください。")
+    if settings["max_level"] > MAX_SAFE_APP_DB:
+        errors.append(
+            f"最大レベルは {MAX_SAFE_APP_DB} app-dB 以下にしてください。"
+            " 現在の内部スケールでは、それを超えるとデジタルクリップの恐れがあります。"
+        )
     if settings.get("use_calibration") and calibration is None:
         errors.append("校正プロファイルを使う場合は、有効なJSONをアップロードしてください。")
     return errors
@@ -1080,7 +1088,15 @@ with st.sidebar:
     st.radio("検査順", list(EAR_OPTIONS.keys()), key="ear_order_input", horizontal=True, disabled=ui_locked)
     st.number_input("開始レベル app-dB", min_value=0, max_value=90, step=5, key="start_level_input", disabled=ui_locked)
     st.number_input("最小レベル app-dB", min_value=0, max_value=40, step=5, key="min_level_input", disabled=ui_locked)
-    st.number_input("最大レベル app-dB", min_value=40, max_value=100, step=5, key="max_level_input", disabled=ui_locked)
+    st.number_input(
+        "最大レベル app-dB",
+        min_value=40,
+        max_value=MAX_SAFE_APP_DB,
+        step=5,
+        key="max_level_input",
+        disabled=ui_locked,
+        help=f"現在の内部音量スケールでは {MAX_SAFE_APP_DB} app-dB が安全上限です。",
+    )
     st.checkbox("音を自動再生する", key="autoplay_input", disabled=ui_locked)
 
     st.divider()
